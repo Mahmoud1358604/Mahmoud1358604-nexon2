@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة التحكم — NEXON</title>
+<link rel="icon" href="assets/logo-dark.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="admin-shell">
+
+<!-- ===== Login (GitHub-backed — same protection model as the old NEX•ON admin) ===== -->
+<div class="admin-login" id="loginView">
+  <div class="login-card">
+    <img src="assets/logo-dark.png" alt="NEXON" class="dark-logo">
+    <img src="assets/logo-light.png" alt="NEXON" class="light-logo">
+    <h2>الدخول للوحة التحكم</h2>
+    <p>مفيش يوزر وباسورد — الدخول بمفتاح GitHub خاص بالمستودع ده بس. اللي معاه المفتاح ده هو بس اللي يقدر ينشر تعديلات.</p>
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginOwner">اسم المستخدم/المنظمة على GitHub</label>
+        <input type="text" id="loginOwner" autocomplete="off" placeholder="مثال: Mahmoud1358604" required>
+      </div>
+      <div class="field">
+        <label for="loginRepo">اسم المستودع (Repository)</label>
+        <input type="text" id="loginRepo" autocomplete="off" placeholder="مثال: nexon-realestate" required>
+      </div>
+      <div class="field">
+        <label for="loginToken">مفتاح الدخول (Personal Access Token)</label>
+        <input type="password" id="loginToken" autocomplete="off" placeholder="ghp_...">
+      </div>
+      <div class="field-inline">
+        <label class="checkbox-inline"><input type="checkbox" id="loginRemember" checked> احفظ البيانات دي على الجهاز ده بس</label>
+      </div>
+      <div class="form-error" id="loginError"></div>
+      <button type="submit" class="btn btn-primary btn-block" id="loginBtn">دخول</button>
+      <button type="button" class="btn btn-ghost btn-block btn-sm" id="clearCredsBtn" style="margin-top:8px">مسح البيانات المحفوظة من الجهاز ده</button>
+    </form>
+    <p class="login-hint">⚠️ المفتاح بيتحفظ في متصفح الجهاز ده بس، ومش بيتبعت لأي حد غير GitHub مباشرة. اعمل مفتاح من نوع Fine-grained Personal Access Token، وحدده على المستودع ده بس بصلاحية Contents: Read and write.</p>
+  </div>
+</div>
+
+<!-- ===== Dashboard ===== -->
+<div id="dashView" style="display:none">
+  <header class="admin-header">
+    <div class="container">
+      <a href="index.html" class="brand" style="color:#fff">
+        <img src="assets/logo-light.png" alt="NEXON" style="height:26px">
+        <span>لوحة التحكم</span>
+      </a>
+      <div style="display:flex; gap:10px; align-items:center">
+        <button class="icon-btn" data-theme-toggle aria-label="تبديل الوضع الليلي" style="background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.2); color:#fff">
+          <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+          <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <a href="index.html" class="btn btn-sm btn-ghost">عرض الموقع</a>
+        <button class="btn btn-sm btn-outline" style="border-color:rgba(255,255,255,.3); color:#fff" id="btnLogout">تسجيل الخروج</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <div class="container">
+
+      <div class="admin-note" id="connNote"></div>
+
+      <div class="admin-toolbar">
+        <h1>إدارة الوحدات</h1>
+        <div class="admin-toolbar-actions">
+          <button class="btn btn-outline btn-sm" id="btnExport">نسخة احتياطية JSON</button>
+          <button class="btn btn-outline btn-sm" id="btnRefresh">تحديث</button>
+          <button class="btn btn-primary btn-sm" id="btnAddUnit">+ إضافة وحدة</button>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card"><b id="statTotal">—</b><span>إجمالي الوحدات</span></div>
+        <div class="stat-card"><b id="statAvailable">—</b><span>متاح</span></div>
+        <div class="stat-card"><b id="statReserved">—</b><span>محجوز</span></div>
+        <div class="stat-card"><b id="statSold">—</b><span>تم البيع</span></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>صورة</th>
+              <th>العنوان</th>
+              <th>السعر</th>
+              <th>النوع</th>
+              <th>الحالة</th>
+              <th>التفاصيل</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="unitsTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- ===== Partner offices ===== -->
+      <div class="admin-section" id="partnersSection">
+        <div class="admin-section-head">
+          <div>
+            <h2>🤝 المكاتب الشريكة</h2>
+            <p>مكاتب عقارية شريكة بتظهر وحداتها من خلال نيكسون</p>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btnAddPartner">+ إضافة مكتب شريك</button>
+        </div>
+        <div class="mini-list" id="partnersList"><p style="color:var(--text-muted); font-size:13.5px;">جارِ التحميل...</p></div>
+      </div>
+
+      <!-- ===== Dead media cleanup ===== -->
+      <div class="admin-section" id="cleanupSection">
+        <div class="admin-section-head">
+          <div>
+            <h2>🧹 تنظيف الملفات الميتة</h2>
+            <p>بيفحص الصور/اللوجوهات اللي اترفعت من اللوحة دي ومش مرتبطة بأي وحدة أو مكتب شريك حاليًا، وبيسيبلك تختار اللي عايز تمسحه</p>
+          </div>
+          <button class="btn btn-outline btn-sm" id="btnScanCleanup">فحص الملفات</button>
+        </div>
+        <div id="cleanupResult" class="cleanup-list"></div>
+        <button class="btn btn-danger btn-sm" id="btnDeleteCleanup" style="display:none">تأكيد حذف المحدد</button>
+        <div class="form-error" id="cleanupStatus" style="margin-top:10px"></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ===== Add/Edit Partner Modal ===== -->
+<div class="modal-overlay" id="partnerModalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>إضافة مكتب شريك</h3>
+      <button class="modal-close" id="partnerModalClose" aria-label="إغلاق">×</button>
+    </div>
+    <form id="partnerForm">
+      <div class="field">
+        <label for="p_name">اسم المكتب</label>
+        <input type="text" id="p_name" required>
+      </div>
+      <div class="field">
+        <label for="p_location">الموقع (اختياري)</label>
+        <input type="text" id="p_location">
+      </div>
+      <div class="field">
+        <label for="p_info">نبذة مختصرة (اختياري)</label>
+        <textarea id="p_info"></textarea>
+      </div>
+      <div class="field">
+        <label for="p_logo">لوجو المكتب</label>
+        <input type="file" id="p_logo" accept="image/*" required>
+        <div class="preview-strip" id="partnerLogoPreview" style="margin-top:8px"></div>
+      </div>
+      <div class="form-error" id="partnerFormError"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('partnerModalOverlay').classList.remove('open')">إلغاء</button>
+        <button type="submit" class="btn btn-primary" id="partnerSubmitBtn">نشر المكتب</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== Add/Edit Modal ===== -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">إضافة وحدة جديدة</h3>
+      <button class="modal-close" id="modalClose" aria-label="إغلاق">×</button>
+    </div>
+    <form id="unitForm">
+      <input type="hidden" id="f_id">
+
+      <div class="field">
+        <label for="f_title">عنوان الوحدة</label>
+        <input type="text" id="f_title" required placeholder="مثال: وحدة سكنية بغرفتين — الدور الثالث">
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="f_status">الحالة</label>
+          <select id="f_status">
+            <option value="available">متاح</option>
+            <option value="reserved">محجوز</option>
+            <option value="sold">تم البيع</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f_listingType">نوع العرض</label>
+          <select id="f_listingType">
+            <option value="rent">للإيجار</option>
+            <option value="sale">للبيع</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="f_price">السعر (جنيه)</label>
+          <input type="number" id="f_price" required min="0">
+        </div>
+        <div class="field">
+          <label for="f_priceUnit">دورية السعر (اختياري)</label>
+          <input type="text" id="f_priceUnit" placeholder="شهريا — اتركها فارغة للبيع">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="f_category">الفئة</label>
+          <input type="text" id="f_category" placeholder="شقة سكنية / دوبلكس / استوديو">
+        </div>
+        <div class="field">
+          <label for="f_area">المساحة (م²)</label>
+          <input type="number" id="f_area" required min="0">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="f_bedrooms">غرف النوم</label>
+          <input type="number" id="f_bedrooms" min="0">
+        </div>
+        <div class="field">
+          <label for="f_bathrooms">دورات المياه</label>
+          <input type="number" id="f_bathrooms" min="0">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="f_floor">الدور</label>
+          <input type="text" id="f_floor" placeholder="الثاني / أرضي / الأخير">
+        </div>
+        <div class="field">
+          <label for="f_age">حالة العقار</label>
+          <input type="text" id="f_age" placeholder="جديد / 5 سنوات">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="f_location">الموقع</label>
+        <input type="text" id="f_location">
+      </div>
+
+      <div class="field">
+        <label for="f_description">الوصف</label>
+        <textarea id="f_description"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="f_imageFiles">صور الوحدة (ارفع صور حقيقية من جهازك)</label>
+        <input type="file" id="f_imageFiles" accept="image/*" multiple>
+        <div class="preview-strip" id="unitImagesPreview" style="margin-top:8px"></div>
+      </div>
+
+      <div class="field">
+        <label for="f_images">روابط صور إضافية (اختياري — رابط في كل سطر، لو عايز تستخدم صور جاهزة بدل الرفع)</label>
+        <textarea id="f_images" placeholder="assets/properties/unit-1.svg"></textarea>
+        <p class="field-hint">لو رفعت صور من جهازك فوق، مش لازم تملأ الحقل ده. لو الاتنين اتملوا هيتضافوا مع بعض.</p>
+      </div>
+
+      <div class="field">
+        <label>المميزات</label>
+        <div class="checkbox-grid" id="featureCheckboxes"></div>
+      </div>
+
+      <div class="form-error" id="formError"></div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="cancelBtn" onclick="document.getElementById('modalOverlay').classList.remove('open')">إلغاء</button>
+        <button type="submit" class="btn btn-primary" id="unitSubmitBtn">حفظ الوحدة</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/theme.js"></script>
+<script src="js/github-api.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
