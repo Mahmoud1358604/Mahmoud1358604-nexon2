@@ -1,0 +1,9 @@
+{
+  "name": "world-life-v0-1",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"dev":"concurrently \"npm:server\" \"npm:client\"","server":"node server/index.js","client":"vite client --host 0.0.0.0"},
+  "dependencies": {"ws":"^8.18.3","express":"^5.1.0","concurrently":"^9.2.1"},
+  "devDependencies": {"vite":"^7.1.3"}
+}
